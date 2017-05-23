@@ -3,6 +3,7 @@ const path = require('path');
 const glob = require('glob');
 const rollup = require('rollup');
 const fable = require('rollup-plugin-fable');
+const sourcemaps = require('rollup-plugin-sourcemaps');
 const package = require('./package.json');
 
 const external = [
@@ -38,7 +39,8 @@ const plugins = [
       babelrc: false,
       sourceMaps: true,
     }
-  })
+  }),
+  sourcemaps()
 ];
 
 const main = async (argv) => {

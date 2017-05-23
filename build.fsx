@@ -155,7 +155,7 @@ Target "TestBuild" (fun _ ->
 )
 
 Target "Test" (fun _ ->
-  let avaArgs = "run ava */bin/js/**/*.js"
+  let avaArgs = "test"
   runYarn testDir avaArgs
 )
 

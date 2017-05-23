@@ -7,7 +7,12 @@
     "babel-preset-env": "^1.5.1",
     "fs-extra": "^3.0.1",
     "glob": "^7.1.2",
+    "nyc": "^10.3.2",
     "rollup": "^0.41.6",
-    "rollup-plugin-fable": "^1.0.4"
+    "rollup-plugin-fable": "^1.0.4",
+    "rollup-plugin-sourcemaps": "^0.4.2"
+  },
+  "scripts": {
+    "test": "nyc ava */bin/js/**/*.js"
   }
 }
