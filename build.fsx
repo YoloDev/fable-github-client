@@ -17,6 +17,14 @@ let gitHome = sprintf "https://github.com/%s" gitOwner
 let projects =
   !! "src/**/*.fsproj"
 
+let testProjects =
+  !! "test/**/*.fsproj"
+
+let jsCompiler = FullName "./test/build.js"
+
+// --------------------------------------------------------------------------------------
+// Install
+
 let dotnetSDKPath = FullName "./dotnetsdk"
 let dotnetcliVersion = "1.0.1"
 let dotnetExePath = dotnetSDKPath </> (if isWindows then "dotnet.exe" else "dotnet")
@@ -84,16 +92,22 @@ Target "InstallDotNetCore" (fun _ ->
     |> Seq.iter (fun path -> tracefn " - %s%c" path System.IO.Path.DirectorySeparatorChar)
 )
 
-let forAll args =
+let forAll projects args =
   projects
   |> Seq.iter (fun s ->
     let dir = IO.Path.GetDirectoryName s
     runDotnet dir args
   )
 
-Target "Install" (fun _ -> forAll "restore")
+let forAllProjects = forAll projects
+let forAllTests = forAll testProjects
 
-Target "Build" (fun _ -> forAll "build")
+Target "Install" (fun _ -> forAllProjects "restore")
+
+// --------------------------------------------------------------------------------------
+// Build
+
+Target "Build" (fun _ -> forAllProjects "build")
 
 let release = LoadReleaseNotes "RELEASE_NOTES.md"
 
@@ -113,11 +127,30 @@ Target "Meta" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
+// Test
+
+Target "TestInstall" (fun _ -> forAllTests "restore")
+
+Target "TestBuild" (fun _ -> 
+  forAllTests "build"
+  testProjects
+  |> Seq.iter (fun proj ->
+    let dir = IO.Path.GetDirectoryName proj
+    let args = sprintf "fable node-run \"%s\" -- \"%s\"" jsCompiler <| FullName proj
+    runDotnet dir args
+    //printfn "To run: dotnet %s" args
+    ()
+  )
+)
+
+Target "Test" DoNothing
+
+// --------------------------------------------------------------------------------------
 // Build a NuGet package
 
-Target "Package" (fun _ -> forAll "pack")
+Target "Package" (fun _ -> forAllProjects "pack")
 
-Target "PublishNuget" (fun _ -> forAll "push")
+Target "PublishNuget" (fun _ -> forAllProjects "push")
 
 Target "Publish" DoNothing
 
@@ -136,10 +169,16 @@ Target "ReleaseDocs" DoNothing
   ==> "GenerateDocs"
   ==> "ReleaseDocs"
 
+"Build"
+  ==> "TestInstall"
+  ==> "TestBuild"
+  ==> "Test"
+//"TestBuild" ==> "Test"
+
 "Publish"
   <== [ "Build"
         "PublishNuget"
         "ReleaseDocs" ]
 
 // start build
-RunTargetOrDefault "Build"
+RunTargetOrDefault "Test"
