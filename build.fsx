@@ -20,6 +20,7 @@ let projects =
 let testProjects =
   !! "test/**/*.fsproj"
 
+let testDir = FullName "./test"
 let jsCompiler = FullName "./test/build.js"
 
 // --------------------------------------------------------------------------------------
@@ -40,6 +41,18 @@ let runDotnet workingDir args =
   match result with
   | 0 -> ()
   | _ -> failwithf "Command failed: dotnet %s" args
+
+let runYarn workingDir args =
+  printfn "CWD: %s" workingDir
+  // printfn "yarn %s" args
+  let result =
+    ExecProcess (fun info ->
+      info.FileName <- "yarn"
+      info.WorkingDirectory <- workingDir
+      info.Arguments <- args) TimeSpan.MaxValue
+  match result with
+  | 0 -> ()
+  | _ -> failwithf "Command failed: yarn %s" args
 
 Target "InstallDotNetCore" (fun _ ->
   let correctVersionInstalled = 
@@ -138,12 +151,13 @@ Target "TestBuild" (fun _ ->
     let dir = IO.Path.GetDirectoryName proj
     let args = sprintf "fable node-run \"%s\" -- \"%s\"" jsCompiler <| FullName proj
     runDotnet dir args
-    //printfn "To run: dotnet %s" args
-    ()
   )
 )
 
-Target "Test" DoNothing
+Target "Test" (fun _ ->
+  let avaArgs = "run ava */bin/js/**/*.js"
+  runYarn testDir avaArgs
+)
 
 // --------------------------------------------------------------------------------------
 // Build a NuGet package

@@ -3,6 +3,12 @@ const path = require('path');
 const glob = require('glob');
 const rollup = require('rollup');
 const fable = require('rollup-plugin-fable');
+const package = require('./package.json');
+
+const external = [
+  ...Object.keys(package.dependencies || {}),
+  ...Object.keys(package.devDependencies || {}),
+];
 
 const replaceExt = (file, ext) => 
   path.basename(file, path.extname(file)) + ext;
@@ -29,7 +35,8 @@ const plugins = [
           modules: false
         }]
       ],
-      babelrc: false
+      babelrc: false,
+      sourceMaps: true,
     }
   })
 ];
@@ -60,7 +67,8 @@ const main = async (argv) => {
 
   let cache = await rollup.rollup({
     entry: proj,
-    plugins
+    plugins,
+    external
   });
 
   for (const file of files) {
@@ -72,13 +80,15 @@ const main = async (argv) => {
     const bundle = await rollup.rollup({
       entry: file,
       cache,
-      plugins
+      plugins,
+      external
     });
 
     cache = bundle;
     const dest = path.join(outDir, replaceExt(file, '.js'));
     await bundle.write({
       format: 'cjs',
+      sourceMap: true,
       dest
     });
   }

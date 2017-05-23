@@ -2,6 +2,7 @@
   "name": "test",
   "private": true,
   "devDependencies": {
+    "ava": "^0.19.1",
     "babel-core": "^6.24.1",
     "babel-preset-env": "^1.5.1",
     "fs-extra": "^3.0.1",

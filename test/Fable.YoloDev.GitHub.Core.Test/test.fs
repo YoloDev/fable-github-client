@@ -1,5 +1,9 @@
 module YoloDev.GitHub.Core.Test
 
-open YoloDev.GitHub.Core
+open Fable.Import.Ava
 
-let test = LastEight ("abcdefge", "long hash here")
+test "test1" <| fun t ->
+  t.Pass "No problem"
+
+test "test2" <| fun t ->
+  t.True (true, "I pass with flying colors :)")
