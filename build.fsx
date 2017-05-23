@@ -142,7 +142,10 @@ Target "Meta" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Test
 
-Target "TestInstall" (fun _ -> forAllTests "restore")
+Target "TestInstall" (fun _ -> 
+  forAllTests "restore"
+  runYarn testDir "install"
+)
 
 Target "TestBuild" (fun _ -> 
   forAllTests "build"
