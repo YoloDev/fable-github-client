@@ -9,7 +9,7 @@ open Fake.NpmHelper
 open Fake.ReleaseNotesHelper
 open Fake.Git
 
-let gitName = "fable-github-client"
+let gitName = "Fable.GitHubClient"
 let gitOwner = "YoloDev"
 let gitHome = sprintf "https://github.com/%s" gitOwner
 
@@ -20,14 +20,14 @@ let projects =
 let testProjects =
   !! "test/**/*.fsproj"
 
-let testDir = FullName "./test"
-let jsCompiler = FullName "./test/build.js"
+let rootDir = FullName "."
+let jsCompiler = FullName "./build.js"
 
 // --------------------------------------------------------------------------------------
 // Install
 
 let dotnetSDKPath = FullName "./dotnetsdk"
-let dotnetcliVersion = "1.0.1"
+let dotnetcliVersion = "1.0.4"
 let dotnetExePath = dotnetSDKPath </> (if isWindows then "dotnet.exe" else "dotnet")
 
 let runDotnet workingDir args =
@@ -35,6 +35,7 @@ let runDotnet workingDir args =
   // printfn "dotnet %s" args
   let result =
     ExecProcess (fun info ->
+      info.EnvironmentVariables.["INSTRUMENT_CODE"] <- "1"
       info.FileName <- dotnetExePath
       info.WorkingDirectory <- workingDir
       info.Arguments <- args) TimeSpan.MaxValue
@@ -47,7 +48,11 @@ let runYarn workingDir args =
   // printfn "yarn %s" args
   let result =
     ExecProcess (fun info ->
-      info.FileName <- "yarn"
+      let cmd, args =
+        match isWindows with
+        | false -> "yarn", args
+        | true -> "cmd", sprintf "/c yarn %s" args
+      info.FileName <- cmd
       info.WorkingDirectory <- workingDir
       info.Arguments <- args) TimeSpan.MaxValue
   match result with
@@ -122,19 +127,29 @@ Target "Install" (fun _ -> forAllProjects "restore")
 
 Target "Build" (fun _ -> forAllProjects "build")
 
-let release = LoadReleaseNotes "RELEASE_NOTES.md"
+//let version = Shell.Exec ("bash", "./script/git-version.sh", rootDir)
+let version = 
+  let procResult = ExecProcessAndReturnMessages (fun info -> 
+    info.FileName <- "bash"
+    info.Arguments <- "./script/git-version.sh get"
+    info.WorkingDirectory <- rootDir) (TimeSpan.FromMinutes 5.0)
+  match procResult.OK with
+  | true -> (Seq.head procResult.Messages).Trim ()
+  | false -> failwithf "git-version exited with exit code %d. Messages:\n  %s" procResult.ExitCode (String.concat "\n  " procResult.Messages)
 
+// TODO: Do better
 Target "Meta" (fun _ ->
+  printfn "Version: %s" version
   [ "<Project xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">"
-    "<PropertyGroup>"
-    "<Description>Fable GitHub Client</Description>"
-    sprintf "<PackageProjectUrl>http://%s.github.io/%s</PackageProjectUrl>" gitOwner gitName
-    sprintf "<PackageLicenseUrl>https://raw.githubusercontent.com/%s/%s/master/LICENSE.md</PackageLicenseUrl>" gitOwner gitName
-    sprintf "<RepositoryUrl>%s/%s</RepositoryUrl>" gitHome gitName
-    "<PackageTags>fable;github</PackageTags>"
-    "<Authors>Alxandr</Authors>" 
-    sprintf "<Version>%s</Version>" (string release.SemVer)
-    "</PropertyGroup>"
+    "  <PropertyGroup>"
+    "    <Description>Fable Ava Bindings</Description>"
+    sprintf "    <PackageProjectUrl>http://%s.github.io/%s</PackageProjectUrl>" gitOwner gitName
+    sprintf "    <PackageLicenseUrl>https://raw.githubusercontent.com/%s/%s/master/LICENSE.md</PackageLicenseUrl>" gitOwner gitName
+    sprintf "    <RepositoryUrl>%s/%s</RepositoryUrl>" gitHome gitName
+    "    <PackageTags>fable;github</PackageTags>"
+    "    <Authors>Alxandr</Authors>" 
+    sprintf "    <Version>%s</Version>" version
+    "  </PropertyGroup>"
     "</Project>" ]
   |> WriteToFile false "Meta.props"
 )
@@ -144,22 +159,19 @@ Target "Meta" (fun _ ->
 
 Target "TestInstall" (fun _ -> 
   forAllTests "restore"
-  runYarn testDir "install"
+  runYarn rootDir "install"
 )
 
 Target "TestBuild" (fun _ -> 
   forAllTests "build"
-  testProjects
-  |> Seq.iter (fun proj ->
-    let dir = IO.Path.GetDirectoryName proj
-    let args = sprintf "fable node-run \"%s\" -- \"%s\"" jsCompiler <| FullName proj
-    runDotnet dir args
-  )
+  Environment.SetEnvironmentVariable ("INSTRUMENT_CODE", "1", EnvironmentVariableTarget.Process)
+  // TODO: Specify free port
+  runDotnet (IO.Path.GetDirectoryName <| Seq.head projects) <| sprintf "fable node-run \"%s\"" jsCompiler
 )
 
 Target "Test" (fun _ ->
-  let avaArgs = "test"
-  runYarn testDir avaArgs
+  runYarn rootDir "test:ci"
+  runYarn rootDir "coverage:show"
 )
 
 // --------------------------------------------------------------------------------------
@@ -167,7 +179,17 @@ Target "Test" (fun _ ->
 
 Target "Package" (fun _ -> forAllProjects "pack")
 
-Target "PublishNuget" (fun _ -> forAllProjects "push")
+Target "PublishNuget" (fun _ ->
+  projects
+  |> Seq.iter (fun proj ->
+    let dir = IO.Path.GetDirectoryName proj
+    let packages = !!(sprintf "%s/bin/Debug/*.nupkg" dir)
+    packages
+    |> Seq.iter (fun pkg ->
+      runDotnet dir <| sprintf "nuget push \"%s\" -k \"%s\" -s \"%s\"" pkg (environVar "MYGET_KEY") "https://www.myget.org/F/yolodev/api/v2/package"
+    )
+  )
+)
 
 Target "Publish" DoNothing
 
@@ -190,7 +212,10 @@ Target "ReleaseDocs" DoNothing
   ==> "TestInstall"
   ==> "TestBuild"
   ==> "Test"
-//"TestBuild" ==> "Test"
+
+"Build"
+  ==> "Package"
+  ==> "PublishNuget"
 
 "Publish"
   <== [ "Build"

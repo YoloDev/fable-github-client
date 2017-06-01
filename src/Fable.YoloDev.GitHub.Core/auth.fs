@@ -1,4 +1,4 @@
-namespace YoloDev.GitHub.Core
+namespace YoloDev.GitHubClient.Core
 
 type DateTime = System.DateTime
 type Url = string

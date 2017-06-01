@@ -1,0 +1,19 @@
+init:
+  - git config --global core.autocrlf input
+
+build:
+  verbosity: detailed
+
+install:
+  - cmd: git fetch --tags --depth 50
+  - cmd: git fetch --tags origin master:master
+  - cmd: bash ./script/prepare-appveyor.sh
+  - ps: Install-Product node ''
+
+os: Visual Studio 2017
+before_build:
+  - cmd: bash ./script/git-version.sh --verbose get
+build_script:
+  - cmd: build.cmd
+test: off
+version: "Build #{build}"

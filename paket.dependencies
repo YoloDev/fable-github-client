@@ -1,8 +1,10 @@
 source https://nuget.org/api/v2
+source https://www.myget.org/F/yolodev/api/v3/index.json
 
 nuget FSharp.Core redirects:force, content:none
 nuget Fable.Core
 nuget Fable.PowerPack
+nuget Fable.Ava
 
 group Build
 framework: net46
@@ -11,5 +13,3 @@ framework: net46
   nuget FAKE
   nuget FSharp.Formatting
   nuget Fable.Compiler
-
-  github fsharp/FAKE modules/Octokit/Octokit.fsx
