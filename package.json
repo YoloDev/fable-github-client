@@ -12,6 +12,7 @@
     "codecov": "^2.2.0",
     "convert-source-map": "^1.5.0",
     "duplexer": "^0.1.1",
+    "fable-builder": "^0.1.8",
     "fable-utils": "^1.0.0",
     "figures": "^2.0.0",
     "fs-extra": "^3.0.1",
@@ -24,10 +25,13 @@
     "through2": "^2.0.3"
   },
   "scripts": {
+    "build": "fable build --instrument",
     "test": "nyc ava bin/js/test/**/*.js",
     "test:ci": "nyc ava --tap bin/js/test/**/*.js | node tapon",
     "codecov": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
-    "coverage:show": "nyc report --reporter=text"
+    "coverage:show": "nyc report --reporter=text",
+    "watch:fable": "fable build --watch",
+    "watch:ava": "ava --watch bin/js/test/**/*.js"
   },
   "ava": {},
   "nyc": {

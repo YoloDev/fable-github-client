@@ -59,6 +59,22 @@ let runYarn workingDir args =
   | 0 -> ()
   | _ -> failwithf "Command failed: yarn %s" args
 
+let paketBin = FullName <| ".paket" </> "paket.exe"
+let runPaket workingDir args =
+  printfn "CWD: %s" workingDir
+  let result =
+    ExecProcess (fun info ->
+      let cmd, args =
+        match isWindows with
+        | false -> paketBin, args
+        | true -> "mono", sprintf "\"%s\" %s" paketBin args
+      info.FileName <- cmd
+      info.WorkingDirectory <- workingDir
+      info.Arguments <- args) TimeSpan.MaxValue
+  match result with
+  | 0 -> ()
+  | _ -> failwithf "Command failed: yarn %s" args
+
 Target "InstallDotNetCore" (fun _ ->
   let correctVersionInstalled = 
     try
@@ -136,6 +152,9 @@ let version =
   match procResult.OK with
   | true -> (Seq.head procResult.Messages).Trim ()
   | false -> failwithf "git-version exited with exit code %d. Messages:\n  %s" procResult.ExitCode (String.concat "\n  " procResult.Messages)
+let isRelease = 
+  let semver = Fake.SemVerHelper.parse version
+  Option.isNone semver.PreRelease
 
 // TODO: Do better
 Target "Meta" (fun _ ->
@@ -166,7 +185,7 @@ Target "TestBuild" (fun _ ->
   forAllTests "build"
   Environment.SetEnvironmentVariable ("INSTRUMENT_CODE", "1", EnvironmentVariableTarget.Process)
   // TODO: Specify free port
-  runDotnet (IO.Path.GetDirectoryName <| Seq.head projects) <| sprintf "fable node-run \"%s\"" jsCompiler
+  runDotnet (IO.Path.GetDirectoryName <| Seq.head projects) <| sprintf "fable npm-run build --port free"
 )
 
 Target "Test" (fun _ ->
@@ -179,6 +198,19 @@ Target "Test" (fun _ ->
 
 Target "Package" (fun _ -> forAllProjects "pack")
 
+Target "PublishMyget" (fun _ ->
+  projects
+  |> Seq.iter (fun proj ->
+    let dir = IO.Path.GetDirectoryName proj
+    let packages = !!(sprintf "%s/bin/Debug/*.nupkg" dir)
+    packages
+    |> Seq.iter (fun pkg ->
+      //runDotnet dir <| sprintf "nuget push \"%s\" -k \"%s\" -s \"%s\"" pkg (environVar "MYGET_KEY") "https://www.myget.org/F/yolodev/api/v2/package"
+      runPaket dir <| sprintf "push url \"https://www.myget.org/F/yolodev\" file \"%s\" apikey \"%s\"" pkg (environVar "MYGET_KEY")
+    )
+  )
+)
+
 Target "PublishNuget" (fun _ ->
   projects
   |> Seq.iter (fun proj ->
@@ -186,7 +218,11 @@ Target "PublishNuget" (fun _ ->
     let packages = !!(sprintf "%s/bin/Debug/*.nupkg" dir)
     packages
     |> Seq.iter (fun pkg ->
-      runDotnet dir <| sprintf "nuget push \"%s\" -k \"%s\" -s \"%s\"" pkg (environVar "MYGET_KEY") "https://www.myget.org/F/yolodev/api/v2/package"
+      //runDotnet dir <| sprintf "nuget push \"%s\" -k \"%s\" -s \"%s\"" pkg (environVar "MYGET_KEY") "https://www.myget.org/F/yolodev/api/v2/package"
+      if isRelease then
+        runPaket dir <| sprintf "push url \"https://nuget.org\" file \"%s\" apikey \"%s\"" pkg (environVar "NUGET_KEY")
+      else
+        printfn "Skipping nuget publish because version is prerelease: %s" version
     )
   )
 )
@@ -215,12 +251,11 @@ Target "ReleaseDocs" DoNothing
 
 "Build"
   ==> "Package"
-  ==> "PublishNuget"
+  ==> "PublishMyget"
 
-"Publish"
-  <== [ "Build"
-        "PublishNuget"
-        "ReleaseDocs" ]
+"Build"
+  ==> "Package"
+  ==> "PublishNuget"
 
 // start build
 RunTargetOrDefault "Test"

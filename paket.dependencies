@@ -10,6 +10,7 @@ group Build
 framework: net46
   source https://nuget.org/api/v2
   nuget FSharp.Core redirects:force, content:none
+  nuget Fable.Core
   nuget FAKE
   nuget FSharp.Formatting
   nuget Fable.Compiler

@@ -1,7 +1,7 @@
 [<AutoOpen>]
 module YoloDev.GitHubClient.Core.Json
 
-open Fable.Core
+(*open Fable.Core
 open Aether
 
 // Types
@@ -102,7 +102,7 @@ module Operators =
   let inline (>>.) m f = Json.bind m (fun _ -> f)
   let inline (.>>) m f = Json.bind (fun _ -> m) f
   let inline ( *>) m1 m2 = Json.map2 (fun _ x -> x) m1 m2
-  let inline ( <*) m1 m2 = Json.map2 (fun x _ -> x) m1 m2
+  let inline (<* ) m1 m2 = Json.map2 (fun x _ -> x) m1 m2
   let inline (>=>) m1 m2 = Json.bind (fun x -> m1 x) m2
   let inline (<=<) m1 m2 = Json.bind (fun x -> m2 x) m1
 
@@ -561,4 +561,4 @@ module Patterns =
   let inline (|Property|_|) key =
       Optic.get (Json.Object_ >?> Map.key_ key)
     >> Option.bind (Json.tryDeserialize >> function | Choice1Of2 a -> Some a
-                                                    | _ -> None)
+                                                    | _ -> None)*)

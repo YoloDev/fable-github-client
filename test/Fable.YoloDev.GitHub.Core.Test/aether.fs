@@ -236,5 +236,6 @@ module Prop =
   let create3 (name: string) (g1: Generator<'a>) (g2: Generator<'b>) (g3: Generator<'c>) (fn: 'a -> 'b -> 'c -> SyncSpec<unit>) =
     Prop.create name (Generator.tuple3 g1 g2 g3) (fun (a, b, c) -> fn a b c)
 
-Prop.create3 "builtins > id_ follows the Lens Laws" Generator.int Generator.int Generator.int <|
-  fun outer inner dummy -> Properties.Lens.followsLensLaws id_ outer inner dummy times2
+//Prop.create3 "builtins > id_ follows the Lens Laws" Generator.int Generator.int Generator.int <|
+//  fun outer inner dummy -> Properties.Lens.followsLensLaws id_ outer inner dummy times2
+Test.create "failing test" <| Properties.Lens.followsLensLaws id_ 0 1 2 times2
