@@ -9,11 +9,11 @@ module Properties =
   /// Lens properties
   [<RequireQualifiedAccess>]
   module Lens =
-    let get (g, _) = fun o -> g o
-    let set (_, s) = fun i o -> s i o
-    let map (g, s) = fun f o -> s (f (g o)) o
+    let get (lensGet, _)       = fun graph -> lensGet graph
+    let set (_, lensSet)       = fun newVal graph -> lensSet newVal graph
+    let map (lensGet, lensSet) = fun tranform graph -> lensSet (tranform (lensGet graph)) graph
 
-    let getSetIdentityWith lensGet lensSet outer = prop {
+    (*let getSetIdentityWith lensGet lensSet outer = prop {
       do! Assert.isDeepEqual (lensSet (lensGet outer) outer) outer <?> "Get-Set Identity"
     }
 
@@ -26,16 +26,18 @@ module Properties =
         do! Assert.pass <?> "Trivial case"
       else
         do! Assert.isDeepEqual (lensSet inner (lensSet dummy outer)) (lensSet inner outer) <?> "Set-Set Order Dependence"
-    }
+    }*)
 
-    let getSetMapCorrespondenceWith lensGet lensSet lensMap mapFn outer = prop {
-      do! Assert.isDeepEqual (lensSet (lensGet outer |> mapFn) outer) (lensMap mapFn outer) <?> "Get-Set to Map Correspondence"
-    }
+    let getSetMapCorrespondenceWith lensGet lensSet lensMap mapFn outer = (*prop {*)
+      (*do!*) Assert.isDeepEqual (lensSet (lensGet outer |> mapFn) outer) (lensMap mapFn outer)// <?> "Get-Set to Map Correspondence"
+    (*}*)
 
     let unwrapLens f lens =
-      f (get lens) (set lens)
+      let getFn = get lens
+      let setFn = set lens
+      f getFn setFn
     
-    /// The Get-Set Identity requires that modifying an entity through a lens by setting a value
+    (*/// The Get-Set Identity requires that modifying an entity through a lens by setting a value
     /// to exactly what it was before then nothing happens.
     let getSetIdentity lens = unwrapLens getSetIdentityWith lens
 
@@ -46,7 +48,7 @@ module Properties =
     /// The Set-Set Order Dependence requires that modifying an entity through a lens by setting
     /// a value to `a` and then setting the same value to `b` behaves the same as having modified
     /// the original entity by only setting the value to `b`.
-    let setSetOrderDependence lens = setSetOrderDependenceWith (set lens)
+    let setSetOrderDependence lens = setSetOrderDependenceWith (set lens)*)
 
     /// The Get-Set to Map Corresponsence requires that modifying an entity through a lens
     /// by getting a value, applying some function `f` to that value and then setting the value to the result
@@ -60,20 +62,20 @@ module Properties =
     /// * Set-Set Order Dependence.
     /// 
     /// Is "Trivial" when `inner = dummy`.
-    let followsLensLaws lens outer inner dummy mapFn = prop {
-      if inner = outer then
-        do! Assert.pass
-        do! Assert.pass
-        do! Assert.pass
-        do! Assert.pass
-      else
-        do! getSetIdentity lens outer
-        do! setGetSymmetry lens outer inner
-        do! setSetOrderDependence lens outer inner dummy
+    let followsLensLaws lens outer inner dummy mapFn = (*prop {
+      //if inner = outer then
+      //  do! Assert.pass
+      //  do! Assert.pass
+      //  do! Assert.pass
+      //  do! Assert.pass
+      //else
+      //  do! getSetIdentity lens outer
+      //  do! setGetSymmetry lens outer inner
+      //  do! setSetOrderDependence lens outer inner dummy
         do! getSetMapCorrespondence lens mapFn outer
-    }
+    }*) getSetMapCorrespondence lens mapFn outer
 
-  /// Prism properties
+  (*/// Prism properties
   [<RequireQualifiedAccess>]
   module Prism =
     let get (g, _) = fun o -> g o
@@ -213,29 +215,29 @@ module Properties =
       do! Prism.setSetOrderDependence (asPrism epi) outer inner dummy
       do! roundtripEquality epi outer
       do! converseRoundtripEquality epi inner
-    }
+    }*)
 
 open System
 open YoloDev.GitHubClient.Core.Aether
 
 [<AutoOpen>]
 module Data =
-  let chars : Isomorphism<string, char[]> =
+  (*let chars : Isomorphism<string, char[]> =
     (fun x -> x.ToCharArray ()), (fun x -> String (x))
   
   let rev : Isomorphism<char[], char[]> =
-    Array.rev, Array.rev
+    Array.rev, Array.rev*)
   
   let times2 = (*) 2
-  let maybeInt = function
+  (*let maybeInt = function
     | Some x when x % 2 = 0 -> Some (x * 3)
     | Some _ -> None
     | None -> Some 1
 
 module Prop =
   let create3 (name: string) (g1: Generator<'a>) (g2: Generator<'b>) (g3: Generator<'c>) (fn: 'a -> 'b -> 'c -> SyncSpec<unit>) =
-    Prop.create name (Generator.tuple3 g1 g2 g3) (fun (a, b, c) -> fn a b c)
+    Prop.create name (Generator.tuple3 g1 g2 g3) (fun (a, b, c) -> fn a b c)*)
 
 //Prop.create3 "builtins > id_ follows the Lens Laws" Generator.int Generator.int Generator.int <|
 //  fun outer inner dummy -> Properties.Lens.followsLensLaws id_ outer inner dummy times2
-Test.create "failing test" <| Properties.Lens.followsLensLaws id_ 0 1 2 times2
+Test.create "failing test" <| SyncSpec.createAssert (Properties.Lens.followsLensLaws id_ 0 1 2 times2)
