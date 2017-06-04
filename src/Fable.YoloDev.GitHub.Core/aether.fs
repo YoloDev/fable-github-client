@@ -31,22 +31,22 @@ module Compose =
         fun ((g1, s1): Lens<'a, 'b>) ->
           (fun a -> g2 (g1 a)),
           (fun c a -> s1 (s2 c (g1 a)) a) : Lens<'a, 'c>
-      
+
       static member (>->) (Lens, (g2, s2): Prism<'b, 'c>) =
         fun ((g1, s1): Lens<'a, 'b>) ->
           (fun a -> g2 (g1 a)),
           (fun c a -> s1 (s2 c (g1 a)) a) : Prism<'a, 'c>
-      
+
       static member (>->) (Lens, (f, t): Isomorphism<'b, 'c>) =
         fun ((g, s): Lens<'a, 'b>) ->
           (fun a -> f (g a)),
           (fun c a -> s (t c) a) : Lens<'a, 'c>
-      
+
       static member (>->) (Lens, (f, t): Epimorphism<'b,'c>) =
         fun ((g, s): Lens<'a, 'b>) ->
           (fun a -> f (g a)),
           (fun c a -> s (t c) a) : Prism<'a, 'c>
-    
+
   /// Compose a lens with an optic or morphism.
   let inline lens l o = (Lens >-> o) l
 
@@ -60,7 +60,7 @@ module Compose =
           (fun a -> Option.map g2 (g1 a)),
           (fun c a -> Option.map (s2 c) (g1 a) |> function | Some b -> s1 b a
                                                            | _ -> a) : Prism<'a,'c>
-      
+
       static member (>?>) (Prism, (g2, s2): Prism<'b,'c>) =
         fun ((g1, s1): Prism<'a,'b>) ->
           (fun a -> Option.bind g2 (g1 a)),
@@ -71,12 +71,12 @@ module Compose =
         fun ((g, s): Prism<'a,'b>) ->
           (fun a -> Option.map f (g a)),
           (fun c a -> s (t c) a) : Prism<'a,'c>
-      
+
       static member (>?>) (Prism, (f, t): Epimorphism<'b,'c>) =
         fun ((g, s): Prism<'a,'b>) ->
           (fun a -> Option.bind f (g a)),
           (fun c a -> s (t c) a) : Prism<'a,'c>
-  
+
   /// Compose a prism with an optic or morphism.
   let inline prism p o = (Prism >?> o) p
 
@@ -91,10 +91,10 @@ module Optic =
     | Get with
       static member (^.) (Get, (g, _): Lens<'a,'b>) =
         fun (a: 'a) -> g a : 'b
-      
+
       static member (^.) (Get, (g, _): Prism<'a,'b>) =
         fun (a: 'a) -> g a : 'b option
-  
+
   /// Get a value using an optic.
   let inline get optic target = (Get ^. optic) target
 
@@ -105,10 +105,10 @@ module Optic =
     | Set with
       static member (^=) (Set, (_, s): Lens<'a,'b>) =
         fun (b: 'b) -> s b : 'a -> 'a
-      
+
       static member (^=) (Set, (_, s): Prism<'a,'b>) =
         fun (b: 'b) -> s b : 'a -> 'a
-  
+
   /// Set a value using an optic.
   let inline set optic value = (Set ^= optic) value
 
@@ -118,7 +118,7 @@ module Optic =
     | Map with
       static member (^%) (Map, (g, s): Lens<'a,'b>) =
         fun (f: 'b -> 'b) -> (fun a -> s (f (g a)) a) : 'a -> 'a
-      
+
       static member (^%) (Map, (g, s): Prism<'a,'b>) =
         fun (f: 'b -> 'b) -> (fun a -> Option.map f (g a) |> function | Some b -> s b a
                                                                       | _ -> a) : 'a -> 'a
@@ -146,28 +146,28 @@ module Optics =
   let id_ : Lens<'a,'a> =
     (fun x -> x),
     (fun x _ -> x)
-  
+
   /// Isomorphism between a boxed and unboxed type.
   let box_<'a> : Isomorphism<obj,'a> =
     unbox<'a>, box
-  
+
   /// Lens to the first item of a tuple.
   let fst_ : Lens<('a * 'b),'a> =
     fst,
     (fun a t -> a, snd t)
-  
+
   /// Lens to the second item of a tuple.
   let snd_ : Lens<('a * 'b),'b> =
     snd,
     (fun b t -> fst t, b)
-  
+
   [<RequireQualifiedAccess>]
   module Map =
     /// Prism to a value associated with a key in a map.
     let key_ (k: 'k) : Prism<Map<'k,'v>,'v> =
       Map.tryFind k,
       (fun v x -> if Map.containsKey k x then Map.add k v x else x)
-    
+
     /// Lens to a value option associated with a key in a map.
     let value_ (k: 'k) : Lens<Map<'k,'v>, 'v option> =
       Map.tryFind k,
@@ -175,6 +175,69 @@ module Optics =
         match v with
         | Some v -> Map.add k v x
         | _ -> Map.remove k x)
+
+    /// Weak Isomorphism to an array of key-value pairs.
+    let array_ : Isomorphism<Map<_, _>, (_ * _) array> =
+      Map.toArray,
+      Map.ofArray
+
+    /// Weak Isomorphism to an list of key-value pairs.
+    let list_ : Isomorphism<Map<_, _>, (_ * _) list> =
+      Map.toList,
+      Map.ofList
+
+  [<RequireQualifiedAccess>]
+  module Array =
+    /// Isomorphism to an list.
+    let list_ : Isomorphism<_ array, _ list> =
+      Array.toList,
+      Array.ofList
+
+  [<RequireQualifiedAccess>]
+  module Choice =
+    /// Prism to Choice1Of2.
+    let choice1Of2_ : Prism<Choice<_,_>, _> =
+      (function | Choice1Of2 v -> Some v | _ -> None),
+      (fun v x -> match x with | Choice1Of2 _ -> Choice1Of2 v | _ -> x)
+
+    /// Prism to Choice2Of2.
+    let choice2Of2_ : Prism<Choice<_,_>, _> =
+      (function | Choice2Of2 v -> Some v | _ -> None),
+      (fun v x -> match x with | Choice2Of2 _ -> Choice2Of2 v | _ -> x)
+
+  [<RequireQualifiedAccess>]
+  module Result =
+    let ok_ : Prism<Result<_,_>, _> =
+      (function | Ok v -> Some v | _ -> None),
+      (fun v x -> match x with | Ok _ -> Ok v | _ -> x)
+
+    let error_ : Prism<Result<_,_>, _> =
+      (function | Error v -> Some v | _ -> None),
+      (fun v x -> match x with | Error _ -> Error v | _ -> x)
+
+  [<RequireQualifiedAccess>]
+  module List =
+    let head_ : Prism<_ list, _> =
+      (function | h :: _ -> Some h | [] -> None),
+      (fun v -> function | _ :: t -> v :: t | [] -> [])
+
+    let tail_ : Prism<_ list, _> =
+      (function | _ :: t -> Some t | [] -> None),
+      (fun v -> function | h :: _ -> h :: v | [] -> [])
+
+    let item_ (i: int) : Prism<_ list, _> =
+      (List.tryItem i),
+      (fun v l -> List.mapi (fun i' x -> if i = i' then v else x) l)
+
+    let array_ : Isomorphism<_ list, _ array> =
+      List.toArray,
+      List.ofArray
+
+  [<RequireQualifiedAccess>]
+  module Option =
+    let value_ : Prism<_ option, _> =
+      id,
+      (fun v -> function | Some _ -> Some v | None -> None)
 
   [<RequireQualifiedAccess>]
   module Pojo =
@@ -193,19 +256,23 @@ module Optics =
       match jsHasProp (prop, o) with
       | true -> Some <| jsGetProp (prop, o)
       | false -> None
-    
+
     let private copyAndDelete (prop: string) (o: obj) =
       let copy = jsAssign (o, createObj [])
       jsDelete (prop, copy)
       copy
 
-    let prop_ (key: string): Prism<obj, obj option> =
+    let value_ (key: string) : Lens<obj, obj option> =
       (getProp key),
       (fun v o ->
         match v with
         | Some v -> jsAssign (o, createObj [ key ==> v ])
         | None -> copyAndDelete key o)
-  
+
+    let key_ (key: 'k) : Prism<obj, obj> =
+      (getProp key),
+      (fun v x -> if jsHasProp(key, x) then jsAssign (x, createObj [ key ==> v ]) else x)
+
 /// Optional custom operators for working with optics. Provides more concise
 /// syntactic options for working with the functions in the `Compose` and
 /// `Optic` modules.
@@ -214,7 +281,7 @@ module Operators =
   /// Compose a lens with an optic or morphism.
   let inline (>->) l o =
     Compose.lens l o
-  
+
   /// Compose a prism with an optic or morphism.
   let inline (>?>) p o =
     Compose.prism p o

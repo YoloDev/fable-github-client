@@ -4,7 +4,7 @@ source https://www.myget.org/F/yolodev/api/v3/index.json
 nuget FSharp.Core redirects:force, content:none
 nuget Fable.Core
 nuget Fable.PowerPack
-nuget Fable.Ava
+nuget Fable.Ava >= 0.2.0
 
 group Build
 framework: net46

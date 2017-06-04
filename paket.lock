@@ -1,8 +1,8 @@
 NUGET
   remote: https://www.myget.org/F/yolodev
-    Fable.Ava (0.1.0)
-      Fable.Core (>= 1.0.7) - restriction: >= netstandard16
-      FSharp.Core (>= 4.1.17) - restriction: >= netstandard16
+    Fable.Ava (0.2.0)
+      Fable.Core (>= 1.0.8) - restriction: >= netstandard16
+      FSharp.Core (>= 4.2) - restriction: >= netstandard16
   remote: https://www.nuget.org/api/v2
     Fable.Core (1.0.8)
       FSharp.Core (>= 4.1.17) - restriction: >= netstandard16
